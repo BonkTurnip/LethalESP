@@ -3,7 +3,11 @@ This is a little game hacking project that I did for one of my favorite games, L
 ## Installation
 1. Download/build the LethalESP.dll file
 2. Use your favorite Mono Injector to inject the .dll into Lethal Company while it is running.
-3. Enjoy!
+   Give it the following information:
+   - Namespace: `LethalESP`
+   - Class: `Loader`
+   - Method: `Init`
+5. Enjoy!
 ## Controls
 - `insert` to toggle the ESP on/off
 - `home` to rescan for grabbable items (necessary when starting a mission)
