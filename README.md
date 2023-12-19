@@ -1,5 +1,5 @@
 # LethalESP
-This a little game hacking project that I did for one of my favorite games, Lethal Company!
+This is a little game hacking project that I did for one of my favorite games, Lethal Company!
 ## Installation
 1. Download/build the LethalESP.dll file
 2. Use your favorite Mono Injector to inject the .dll into Lethal Company while it is running.
