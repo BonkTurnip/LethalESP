@@ -8,10 +8,11 @@ This is a little game hacking project that I did for one of my favorite games, L
    - Class: `Loader`
    - Method: `Init`
 5. Enjoy!
-## Controls
+## Usage
 - `insert` to toggle the ESP on/off
 - `home` to rescan for grabbable items (necessary when starting a mission)
 - `del` to switch between game cameras (only do this if the position of the boxes is wrong)
+- Enemies appear in red, scrap in green, and entrances/exits in cyan
 ## Building
 1. Import the project into Visual Studio. I used VS2019, but it will probably work on newer versions.
 2. Add Assembly-CSharp.dll, Assembly-CSharp-firstpass.dll, and Unity* from the `Lethal Company_data` directory in the `Lethal Company` install directory to the references in the project.
