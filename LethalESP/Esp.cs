@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace LethalESP
 {
@@ -11,6 +12,7 @@ namespace LethalESP
         Landmine[] mines;
         Turret[] turrets;
         int camIndex;
+        int miniCamIndex;
         bool shouldRender;
         float nextEnemyScan;
         private readonly float margin = 100f;
@@ -19,6 +21,7 @@ namespace LethalESP
             cameras = FindObjectsByType(typeof(Camera), FindObjectsSortMode.InstanceID) as Camera[];
             Rescan();
             camIndex = 9;
+            miniCamIndex = 0;
             shouldRender = true;
             nextEnemyScan = Time.time;
         }
@@ -40,14 +43,33 @@ namespace LethalESP
             {
                 shouldRender = !shouldRender;
             }
+            if (Event.current.Equals(Event.KeyboardEvent("end")))
+            {
+                miniCamIndex++;
+                if(miniCamIndex >= cameras.Length)
+                {
+                    miniCamIndex = 0;
+                }
+            }
             if(nextEnemyScan < Time.time)
             {
                 enemies = FindObjectsByType(typeof(EnemyAI), FindObjectsSortMode.None) as EnemyAI[];
+                for(int i = 0; i < enemies.Length; i++)
+                {
+                    SkinnedMeshRenderer[] skins = enemies[i].skinnedMeshRenderers;
+                    for(int j = 0; j < skins.Length; j++)
+                    {
+                        skins[j].material.shader = Shader.Find("Unlit/Texture");
+                        skins[j].material.mainTexture = Texture2D.redTexture;
+                        skins[j].material.renderQueue = (int)RenderQueue.Transparent;
+                    }
+                }
                 nextEnemyScan = Time.time + 5f;
             }
         }
         public void OnGUI()
         {
+            //ZatsRenderer.DrawString(new Vector2(100, 50), "found: " + (Shader.Find("Unlit/Texture") != null));
             if (shouldRender)
             {
                 for (int i = 0; i < objects.Length; i++)
@@ -57,11 +79,6 @@ namespace LethalESP
                     if (fixedPos.z < 0) continue;
                     if (objects[i].isInShipRoom) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    //ZatsRenderer.DrawString(new Vector2(100, 50), "camIndex: " + camIndex);
-                    //ZatsRenderer.DrawString(new Vector2(100, 25), "pos: " + ((Camera)cameras[camIndex]).transform.position);
-                    //ZatsRenderer.DrawString(new Vector2(100, 75), "objpos: " + ((GrabbableObject)objects[0]).transform.position);
-                    //ZatsRenderer.DrawString(new Vector2(100, 100), "scrpos: " + ((Camera)cameras[camIndex]).WorldToScreenPoint(((GrabbableObject)objects[0]).transform.position));
-                    //ZatsRenderer.DrawString(new Vector2(100, 125), "scrdim: " + ((Camera)cameras[camIndex]).pixelWidth + " x " + ((Camera)cameras[camIndex]).pixelHeight);
 
                     DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.green);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.green, 1f);
@@ -75,7 +92,6 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(offsetLoc);
                     if (fixedPos.z < 0) continue;
                     DrawCircle(new Vector2(fixedPos.x, fixedPos.y), 25f, Color.cyan);
-                    //DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.cyan);
                 }
 
                 for(int i = 0; i < enemies.Length; i++)
@@ -110,6 +126,9 @@ namespace LethalESP
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Turret");
                 }
+                Camera miniCam = cameras[miniCamIndex];
+                miniCam.Render();
+                GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
             }
         }
 
