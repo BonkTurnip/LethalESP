@@ -11,18 +11,23 @@ namespace LethalESP
         EnemyAI[] enemies;
         Landmine[] mines;
         Turret[] turrets;
+        StartMatchLever lever;
         int camIndex;
         int miniCamIndex;
         bool shouldRender;
+        bool shouldRenderMini;
         float nextEnemyScan;
         private readonly float margin = 100f;
+        private readonly float maxSize = 500f;
         public void Start()
         {
             cameras = FindObjectsByType(typeof(Camera), FindObjectsSortMode.InstanceID) as Camera[];
+            lever = FindObjectOfType(typeof(StartMatchLever)) as StartMatchLever;
             Rescan();
             camIndex = 9;
             miniCamIndex = 0;
             shouldRender = true;
+            shouldRenderMini = true;
             nextEnemyScan = Time.time;
         }
         public void Update()
@@ -51,7 +56,11 @@ namespace LethalESP
                     miniCamIndex = 0;
                 }
             }
-            if(nextEnemyScan < Time.time)
+            if (Event.current.Equals(Event.KeyboardEvent("page down")))
+            {
+                shouldRenderMini = !shouldRenderMini;
+            }
+            if (nextEnemyScan < Time.time)
             {
                 enemies = FindObjectsByType(typeof(EnemyAI), FindObjectsSortMode.None) as EnemyAI[];
                 for(int i = 0; i < enemies.Length; i++)
@@ -74,19 +83,21 @@ namespace LethalESP
             {
                 for (int i = 0; i < objects.Length; i++)
                 {
+                    if (objects[i] == null) continue;
                     Vector3 loc = objects[i].transform.position;
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (objects[i].isInShipRoom) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
 
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.green);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.green);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.green, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), objects[i].itemProperties.itemName);
                 }
 
                 for(int i = 0; i < doors.Length; i++)
                 {
+                    if (doors[i] == null) continue;
                     Vector3 loc = doors[i].entrancePoint.position;
                     Vector3 offsetLoc = new Vector3(loc.x, loc.y + 1f, loc.z);
                     Vector3 fixedPos = FixedWorldToScreenPoint(offsetLoc);
@@ -96,39 +107,54 @@ namespace LethalESP
 
                 for(int i = 0; i < enemies.Length; i++)
                 {
+                    if (enemies[i] == null) continue;
                     Vector3 loc = enemies[i].transform.position;
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), enemies[i].enemyType.enemyName);
                 }
 
                 for(int i = 0; i < mines.Length; i++)
                 {
+                    if (mines[i] == null) continue;
                     Vector3 loc = mines[i].transform.position;
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Landmine");
                 }
 
                 for (int i = 0; i < turrets.Length; i++)
                 {
+                    if (turrets[i] == null) continue;
                     Vector3 loc = turrets[i].transform.position;
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), new Vector2(50, 50), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Turret");
                 }
-                Camera miniCam = cameras[miniCamIndex];
-                miniCam.Render();
-                GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
+                if (shouldRenderMini)
+                {
+                    Camera miniCam = cameras[miniCamIndex];
+                    miniCam.Render();
+                    GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
+                }
+                if(lever != null)
+                {
+                    Vector3 loc = lever.transform.position;
+                    Vector3 fixedPos = FixedWorldToScreenPoint(loc);
+                    if (!(fixedPos.z < 0) && checkScreenMargins(fixedPos, margin))
+                    {
+                        DrawTriangle(fixedPos, new Vector2(50, 50), Color.magenta);
+                    }
+                }
             }
         }
 
@@ -195,6 +221,34 @@ namespace LethalESP
                 ZatsRenderer.DrawLine(points[i], points[i + 1], color, 1f);
             }
             ZatsRenderer.DrawLine(points[0], points[points.Length - 1], color, 1f);
+        }
+
+        private void DrawTriangle(Vector2 position, Vector2 size, Color color)
+        {
+            //  0
+            // 1 2
+            Vector2[] points = new Vector2[3];
+            points[0].x = position.x;
+            points[0].y = position.y - (size.y / 2f);
+            points[1].x = position.x - (size.x / 2f);
+            points[1].y = position.y + (size.y / 2f);
+            points[2].x = position.x + (size.x / 2f);
+            points[2].y = position.y + (size.y / 2f);
+            ZatsRenderer.DrawLine(points[0], points[1], color, 1f);
+            ZatsRenderer.DrawLine(points[2], points[1], color, 1f);
+            ZatsRenderer.DrawLine(points[0], points[2], color, 1f);
+        }
+
+        private Vector2 CalculateSizeBasedOnDistance(Vector3 object0, Vector3 object1, Vector2 maxSize)
+        {
+            float manDist = Mathf.Abs(object0.x - object1.x) + Mathf.Abs(object0.y - object1.y) + Mathf.Abs(object0.z - object1.z);
+            return new Vector2(maxSize.x / manDist, maxSize.y / manDist);
+        }
+
+        private Vector2 CalculateSizeBasedOnDistance(Vector3 object0, Vector3 object1, float maxSize)
+        {
+            float manDist = Mathf.Abs(object0.x - object1.x) + Mathf.Abs(object0.y - object1.y) + Mathf.Abs(object0.z - object1.z);
+            return new Vector2(maxSize / manDist, maxSize / manDist);
         }
     }
 }
