@@ -11,7 +11,6 @@ This is a little game hacking project that I did for one of my favorite games, L
 ## Usage
 - `insert` to toggle the ESP on/off
 - `home` to rescan for grabbable items (necessary when starting a mission)
-- `del` to switch between game cameras (only do this if the position of the boxes is wrong)
 - `end` to switch between cameras used for the minicam
 - `page down` to toggle rendering the minicam
 - Enemies appear in red, scrap in green, and entrances/exits in cyan
