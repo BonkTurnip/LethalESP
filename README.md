@@ -21,6 +21,6 @@ This is a little game hacking project that I did for one of my favorite games, L
 3. Build the project.
 ## Notes
 - This has only been tested with a resolution of 1920x1080. You will likely have trouble with ESP alignment on other aspect ratios/resolutions.
-- Works in multiplayer you will just need to use `del` to find the correct game camera and `end` to select the right camera for your minicam.
+- Works in multiplayer you will just need to use `end` to select the right camera for your minicam.
 - Make sure to inject once you have loaded into a game otherwise it won't work right.
 - Using this cheat **WILL** impact your game's performance
