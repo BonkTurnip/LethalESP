@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using UnityEngine.Rendering;
+using GameNetcodeStuff;
 
 namespace LethalESP
 {
@@ -12,7 +13,7 @@ namespace LethalESP
         Landmine[] mines;
         Turret[] turrets;
         StartMatchLever lever;
-        int camIndex;
+        PlayerControllerB localPlayer;
         int miniCamIndex;
         bool shouldRender;
         bool shouldRenderMini;
@@ -23,8 +24,8 @@ namespace LethalESP
         {
             cameras = FindObjectsByType(typeof(Camera), FindObjectsSortMode.InstanceID) as Camera[];
             lever = FindObjectOfType(typeof(StartMatchLever)) as StartMatchLever;
+            localPlayer = GameNetworkManager.Instance.localPlayerController;
             Rescan();
-            camIndex = 9;
             miniCamIndex = 0;
             shouldRender = true;
             shouldRenderMini = true;
@@ -32,14 +33,6 @@ namespace LethalESP
         }
         public void Update()
         {
-            if (Event.current.Equals(Event.KeyboardEvent("delete")))
-            {
-                camIndex++;
-                if(camIndex >= cameras.Length)
-                {
-                    camIndex = 0;
-                }
-            }
             if (Event.current.Equals(Event.KeyboardEvent("home")))
             {
                 Rescan();
@@ -90,7 +83,7 @@ namespace LethalESP
                     if (objects[i].isInShipRoom) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
 
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.green);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.green);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.green, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), objects[i].itemProperties.itemName);
                 }
@@ -112,7 +105,7 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), enemies[i].enemyType.enemyName);
                 }
@@ -124,7 +117,7 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Landmine");
                 }
@@ -136,15 +129,19 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, cameras[camIndex].transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Turret");
                 }
                 if (shouldRenderMini)
                 {
                     Camera miniCam = cameras[miniCamIndex];
-                    miniCam.Render();
-                    GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
+                    if(miniCam != null)
+                    {
+                        miniCam.Render();
+                        if(miniCam.activeTexture != null)
+                            GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
+                    }
                 }
                 if(lever != null)
                 {
@@ -176,8 +173,8 @@ namespace LethalESP
 
         private Vector3 FixedWorldToScreenPoint(Vector3 worldPosition)
         {
-            Vector3 w2s = cameras[camIndex].WorldToScreenPoint(worldPosition);
-            Vector3 fixedPos = new Vector3(w2s.x * 2.232558140f, (cameras[camIndex].pixelHeight - w2s.y) * 2.076923077f, w2s.z);
+            Vector3 w2s = localPlayer.gameplayCamera.WorldToScreenPoint(worldPosition);
+            Vector3 fixedPos = new Vector3(w2s.x * 2.232558140f, (localPlayer.gameplayCamera.pixelHeight - w2s.y) * 2.076923077f, w2s.z);
             return fixedPos;
         }
 
