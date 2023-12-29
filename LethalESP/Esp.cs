@@ -18,6 +18,8 @@ namespace LethalESP
         bool shouldRender;
         bool shouldRenderMini;
         float nextEnemyScan;
+        float nextCamUpdate;
+        Texture lastCamTexture;
         private readonly float margin = 100f;
         private readonly float maxSize = 500f;
         public void Start()
@@ -26,10 +28,14 @@ namespace LethalESP
             lever = FindObjectOfType(typeof(StartMatchLever)) as StartMatchLever;
             localPlayer = GameNetworkManager.Instance.localPlayerController;
             Rescan();
-            miniCamIndex = 0;
+            miniCamIndex = 1;
             shouldRender = true;
             shouldRenderMini = true;
             nextEnemyScan = Time.time;
+            nextCamUpdate = Time.time;
+            RenderTexture playerTexture = localPlayer.gameplayCamera.activeTexture;
+            lastCamTexture = new Texture2D(playerTexture.width, playerTexture.height, TextureFormat.RGBA32, 1, false);
+            Graphics.CopyTexture(playerTexture, 0, 0, lastCamTexture, 0, 0);
         }
         public void Update()
         {
@@ -46,7 +52,7 @@ namespace LethalESP
                 miniCamIndex++;
                 if(miniCamIndex >= cameras.Length)
                 {
-                    miniCamIndex = 0;
+                    miniCamIndex = 1;
                 }
             }
             if (Event.current.Equals(Event.KeyboardEvent("page down")))
@@ -138,9 +144,19 @@ namespace LethalESP
                     Camera miniCam = cameras[miniCamIndex];
                     if(miniCam != null)
                     {
-                        miniCam.Render();
-                        if(miniCam.activeTexture != null)
-                            GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), miniCam.activeTexture);
+                        if(nextCamUpdate < Time.time)
+                        {
+                            miniCam.Render();
+                            if (miniCam.activeTexture != null)
+                            {
+                                lastCamTexture = new Texture2D(miniCam.activeTexture.width, miniCam.activeTexture.height, TextureFormat.RGBA32, 1, false);
+                                Graphics.CopyTexture(miniCam.activeTexture, 0, 0, lastCamTexture, 0, 0);
+                            }
+                            nextCamUpdate += 0.07f;
+                        }
+                        
+                        
+                        GUI.DrawTexture(new Rect(Screen.width - miniCam.pixelWidth, 0, miniCam.pixelWidth, miniCam.pixelHeight), lastCamTexture);
                     }
                 }
                 if(lever != null)
