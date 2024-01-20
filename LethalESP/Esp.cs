@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Rendering;
 using GameNetcodeStuff;
 
@@ -15,11 +16,15 @@ namespace LethalESP
         StartMatchLever lever;
         PlayerControllerB localPlayer;
         int miniCamIndex;
+        int highlightedObjectIndex;
         bool shouldRender;
         bool shouldRenderMini;
         float nextEnemyScan;
         float nextCamUpdate;
+        float nextUpdateHighlight;
         Texture lastCamTexture;
+        NavMeshPath pathToObject;
+        bool isValidPath;
         private readonly float margin = 100f;
         private readonly float maxSize = 500f;
         public void Start()
@@ -28,17 +33,39 @@ namespace LethalESP
             lever = FindObjectOfType(typeof(StartMatchLever)) as StartMatchLever;
             localPlayer = GameNetworkManager.Instance.localPlayerController;
             Rescan();
+            highlightedObjectIndex = 0;
             miniCamIndex = 1;
             shouldRender = true;
             shouldRenderMini = true;
+            isValidPath = false;
+            pathToObject = new NavMeshPath();
             nextEnemyScan = Time.time;
             nextCamUpdate = Time.time;
+            nextUpdateHighlight = Time.time;
             RenderTexture playerTexture = localPlayer.gameplayCamera.activeTexture;
             lastCamTexture = new Texture2D(playerTexture.width, playerTexture.height, TextureFormat.RGBA32, 1, false);
             Graphics.CopyTexture(playerTexture, 0, 0, lastCamTexture, 0, 0);
         }
         public void Update()
         {
+            if (Event.current.Equals(Event.KeyboardEvent("delete")))
+            {
+                if((highlightedObjectIndex >= 0 && highlightedObjectIndex < (objects.Length + doors.Length)) && ((highlightedObjectIndex < objects.Length && objects[highlightedObjectIndex] != null) || (highlightedObjectIndex >= objects.Length && (doors[highlightedObjectIndex - objects.Length] != null))))
+                {
+                    if(highlightedObjectIndex >= objects.Length)
+                    {
+                        Vector3 source = RoundManager.Instance.GetNavMeshPosition(localPlayer.transform.position, RoundManager.Instance.navHit, 2.7f, -1);
+                        Vector3 destination = RoundManager.Instance.GetNavMeshPosition(doors[highlightedObjectIndex - objects.Length].entrancePoint.position, RoundManager.Instance.navHit, 2.7f, -1);
+                        isValidPath = NavMesh.CalculatePath(source, destination, NavMesh.AllAreas, pathToObject);
+                    }
+                    else
+                    {
+                        Vector3 source = RoundManager.Instance.GetNavMeshPosition(localPlayer.transform.position, RoundManager.Instance.navHit, 2.7f, -1);
+                        Vector3 destination = RoundManager.Instance.GetNavMeshPosition(objects[highlightedObjectIndex].transform.position, RoundManager.Instance.navHit, 2.7f, -1);
+                        isValidPath = NavMesh.CalculatePath(source, destination, NavMesh.AllAreas, pathToObject);
+                    }
+                }
+            }
             if (Event.current.Equals(Event.KeyboardEvent("home")))
             {
                 Rescan();
@@ -46,6 +73,7 @@ namespace LethalESP
             if (Event.current.Equals(Event.KeyboardEvent("insert")))
             {
                 shouldRender = !shouldRender;
+                isValidPath = false;
             }
             if (Event.current.Equals(Event.KeyboardEvent("end")))
             {
@@ -74,6 +102,36 @@ namespace LethalESP
                 }
                 nextEnemyScan = Time.time + 5f;
             }
+            if (nextUpdateHighlight < Time.time)
+            {
+                int doorObjectLength = objects.Length + doors.Length;
+                float[] distances = new float[doorObjectLength];
+                int minIndex = 0;
+                for(int i = 0; i < doorObjectLength; i++)
+                {
+                    if(i >= objects.Length)
+                    {
+                        int doorIndex = i - objects.Length;
+                        Vector3 screenPosition = FixedWorldToScreenPoint(doors[doorIndex].entrancePoint.position);
+                        distances[i] = Mathf.Abs(screenPosition.x - (Screen.width / 2)) + Mathf.Abs(screenPosition.y - (Screen.height / 2));
+                        if (distances[i] < distances[minIndex])
+                        {
+                            minIndex = i;
+                        }
+                    }
+                    else
+                    {
+                        Vector3 screenPosition = FixedWorldToScreenPoint(objects[i].transform.position);
+                        distances[i] = Mathf.Abs(screenPosition.x - (Screen.width / 2)) + Mathf.Abs(screenPosition.y - (Screen.height / 2));
+                        if (distances[i] < distances[minIndex])
+                        {
+                            minIndex = i;
+                        }
+                    }
+                }
+                highlightedObjectIndex = minIndex;
+                nextUpdateHighlight = Time.time + 0.07f;
+            }
         }
         public void OnGUI()
         {
@@ -88,9 +146,10 @@ namespace LethalESP
                     if (fixedPos.z < 0) continue;
                     if (objects[i].isInShipRoom) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.green);
-                    ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.green, 1f);
+                    Color color = Color.green;
+                    if (i == highlightedObjectIndex) color = Color.yellow;
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.transform.position, maxSize), color);
+                    ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), color, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), objects[i].itemProperties.itemName);
                 }
 
@@ -101,7 +160,9 @@ namespace LethalESP
                     Vector3 offsetLoc = new Vector3(loc.x, loc.y + 1f, loc.z);
                     Vector3 fixedPos = FixedWorldToScreenPoint(offsetLoc);
                     if (fixedPos.z < 0) continue;
-                    DrawCircle(new Vector2(fixedPos.x, fixedPos.y), 25f, Color.cyan);
+                    Color color = Color.cyan;
+                    if (i == (highlightedObjectIndex - objects.Length)) color = Color.yellow;
+                    DrawCircle(new Vector2(fixedPos.x, fixedPos.y), 25f, color);
                 }
 
                 for(int i = 0; i < enemies.Length; i++)
@@ -109,11 +170,14 @@ namespace LethalESP
                     if (enemies[i] == null) continue;
                     Vector3 loc = enemies[i].transform.position;
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
+                    // don't care about manticoils
+                    string enemyName = enemies[i].enemyType.enemyName;
+                    if (enemyName == "Manticoil" || enemyName == "Docile Locust Bees") continue;
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
-                    ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), enemies[i].enemyType.enemyName);
+                    ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), enemyName);
                 }
 
                 for(int i = 0; i < mines.Length; i++)
@@ -123,7 +187,7 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Landmine");
                 }
@@ -135,7 +199,7 @@ namespace LethalESP
                     Vector3 fixedPos = FixedWorldToScreenPoint(loc);
                     if (fixedPos.z < 0) continue;
                     if (!checkScreenMargins(fixedPos, margin)) continue;
-                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.gameplayCamera.transform.position, maxSize), Color.red);
+                    DrawClearBox(new Vector2(fixedPos.x, fixedPos.y), CalculateSizeBasedOnDistance(loc, localPlayer.transform.position, maxSize), Color.red);
                     ZatsRenderer.DrawLine(new Vector2(Screen.width / 2, Screen.height / 2), new Vector2(fixedPos.x, fixedPos.y), Color.red, 1f);
                     ZatsRenderer.DrawString(new Vector2(fixedPos.x, fixedPos.y + 25), "Turret");
                 }
@@ -166,6 +230,17 @@ namespace LethalESP
                     if (!(fixedPos.z < 0) && checkScreenMargins(fixedPos, margin))
                     {
                         DrawTriangle(fixedPos, new Vector2(50, 50), Color.magenta);
+                    }
+                }
+                if (isValidPath)
+                {
+                    for(int i = 0; i < pathToObject.corners.Length - 1; i++)
+                    {
+                        Vector3 start = FixedWorldToScreenPoint(pathToObject.corners[i]);
+                        Vector3 end = FixedWorldToScreenPoint(pathToObject.corners[i + 1]);
+                        if (start.z < 0 || end.z < 0) continue;
+                        if (!(checkScreenMargins(start, margin) && checkScreenMargins(end, margin))) continue;
+                        ZatsRenderer.DrawLine(start, end, Color.yellow, 2.0f);
                     }
                 }
             }
