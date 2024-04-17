@@ -136,6 +136,7 @@ namespace LethalESP
         public void OnGUI()
         {
             //ZatsRenderer.DrawString(new Vector2(100, 50), "found: " + (Shader.Find("Unlit/Texture") != null));
+            //ZatsRenderer.DrawString(new Vector2(100, 50), localPlayer.gameplayCamera.pixelHeight + " x " + localPlayer.gameplayCamera.pixelWidth);
             if (shouldRender)
             {
                 for (int i = 0; i < objects.Length; i++)
@@ -264,8 +265,11 @@ namespace LethalESP
 
         private Vector3 FixedWorldToScreenPoint(Vector3 worldPosition)
         {
+            // player camera is 520 x 860 pixels
             Vector3 w2s = localPlayer.gameplayCamera.WorldToScreenPoint(worldPosition);
-            Vector3 fixedPos = new Vector3(w2s.x * 2.232558140f, (localPlayer.gameplayCamera.pixelHeight - w2s.y) * 2.076923077f, w2s.z);
+            float widthFactor = Mathf.Pow(10f, Mathf.Log10(Screen.width) - Mathf.Log10(localPlayer.gameplayCamera.pixelWidth));
+            float heightFactor = Mathf.Pow(10f, Mathf.Log10(Screen.height) - Mathf.Log10(localPlayer.gameplayCamera.pixelHeight));
+            Vector3 fixedPos = new Vector3(w2s.x * widthFactor, (localPlayer.gameplayCamera.pixelHeight - w2s.y) * heightFactor, w2s.z);
             return fixedPos;
         }
 
