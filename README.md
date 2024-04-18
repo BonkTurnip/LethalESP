@@ -13,6 +13,7 @@ This is a little game hacking project that I did for one of my favorite games, L
 - `home` to rescan for grabbable items (necessary when starting a mission)
 - `end` to switch between cameras used for the minicam
 - `page down` to toggle rendering the minicam
+- `delete` when hovering over an exit or item to plot a route to that destination
 - Enemies appear in red, scrap in green, and entrances/exits in cyan
 - The ship location appears as a magenta triangle
 ## Building
